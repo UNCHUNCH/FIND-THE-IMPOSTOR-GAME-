@@ -2,21 +2,25 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>IMUPOSTOR</title>
+<title>Find The Impostor</title>
 
 <style>
 
 body{
 font-family:Arial;
-text-align:center;
 background:#111;
 color:white;
+text-align:center;
+margin:0;
+padding:0;
 }
 
 button{
 padding:15px;
 margin:10px;
 font-size:18px;
+border:none;
+border-radius:8px;
 cursor:pointer;
 }
 
@@ -27,6 +31,7 @@ font-size:18px;
 
 .screen{
 display:none;
+padding:40px;
 }
 
 .active{
@@ -38,58 +43,69 @@ display:block;
 
 <body>
 
-<h1>IMUPOSTOR</h1>
-
+<!-- SCREEN 1 -->
 <div id="menu" class="screen active">
+<h1>FIND THE IMPOSTOR</h1>
 
 <button onclick="createRoom()">Create Room</button>
 
 <br><br>
 
 <input id="roomInput" placeholder="Room Code">
+<br>
 
 <button onclick="joinRoom()">Join Room</button>
 
 </div>
 
-
+<!-- SCREEN 2 -->
 <div id="lobby" class="screen">
+<h2>Room Code:</h2>
+<h1 id="roomCode"></h1>
 
-<h2 id="roomCode"></h2>
-
-Players:
-
-<div id="playerList"></div>
+<h3>Players:</h3>
+<div id="players"></div>
 
 <br>
 
 <button onclick="startGame()">Start Game</button>
-
 </div>
 
-
+<!-- SCREEN 3 -->
 <div id="roleScreen" class="screen">
 
 <h2>Your Role</h2>
 
-<h1 id="roleText"></h1>
+<h1 id="role"></h1>
 
-<h2 id="wordText"></h2>
+<h2 id="word"></h2>
+
+<button onclick="showNext()">Next Player</button>
+
+</div>
+
+<!-- SCREEN 4 -->
+<div id="finish" class="screen">
+
+<h1>Game Started</h1>
+
+<h2>Discuss and find the impostor!</h2>
 
 </div>
 
 
-
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
 
 const firebaseConfig = {
-apiKey: "AIzaSyC2PkOFEVo3ujAf5An6raE3VljHWJZmG-o",
+apiKey: "YOUR_API_KEY",
 authDomain: "imupostor.firebaseapp.com",
+databaseURL: "https://imupostor-default-rtdb.asia-southeast1.firebasedatabase.app",
 projectId: "imupostor",
-storageBucket: "imupostor.firebasestorage.app",
+storageBucket: "imupostor.appspot.com",
 messagingSenderId: "927436604068",
 appId: "1:927436604068:web:aaa75c6c8dd40695971c31"
 };
@@ -97,131 +113,219 @@ appId: "1:927436604068:web:aaa75c6c8dd40695971c31"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-let room = "";
-let playerId = Math.random().toString(36).substring(2);
+let room = ""
+let playerID = Math.random().toString(36).substring(7)
 
-const words = [
+let players = []
+let roles = []
+let words = []
+
+let revealIndex = 0
+
+
+const wordPairs = [
+
 ["Apple","Pear"],
-["Dog","Wolf"],
-["Car","Truck"],
-["Coffee","Tea"],
-["Pizza","Burger"],
 ["Cat","Tiger"],
+["Coffee","Tea"],
+["Beach","Island"],
+["Doctor","Nurse"],
+["Pizza","Burger"],
+["Car","Motorcycle"],
 ["Plane","Helicopter"],
-["Phone","Tablet"],
-["School","University"],
-["Chair","Sofa"]
-];
+["Rain","Snow"],
+["Laptop","Computer"],
 
-function randomRoom(){
-return Math.random().toString(36).substring(2,7).toUpperCase();
+["Dog","Wolf"],
+["Chair","Sofa"],
+["Pen","Pencil"],
+["Fire","Smoke"],
+["King","Queen"],
+["River","Lake"],
+["Bread","Cake"],
+["Phone","Tablet"],
+["Sun","Moon"],
+["Shirt","Jacket"],
+
+["Water","Juice"],
+["Orange","Mango"],
+["Lion","Leopard"],
+["Fish","Shark"],
+["Train","Bus"],
+["Milk","Cheese"],
+["Knife","Sword"],
+["Hat","Helmet"],
+["Book","Magazine"],
+["House","Apartment"],
+
+["City","Village"],
+["Forest","Jungle"],
+["Bed","Pillow"],
+["Clock","Watch"],
+["Camera","Video"],
+["Music","Song"],
+["Teacher","Student"],
+["Police","Detective"],
+["Mountain","Hill"],
+["Bridge","Tunnel"],
+
+["Shoe","Boot"],
+["Tree","Plant"],
+["Keyboard","Mouse"],
+["TV","Cinema"],
+["Boat","Ship"],
+["Ice","Snow"],
+["Chocolate","Candy"],
+["Paper","Card"],
+["Bottle","Glass"],
+["Desk","Table"]
+
+]
+
+
+function show(screen){
+
+document.querySelectorAll(".screen").forEach(s=>{
+s.classList.remove("active")
+})
+
+document.getElementById(screen).classList.add("active")
+
 }
+
+
 
 window.createRoom = function(){
 
-room = randomRoom()
+room = Math.random().toString(36).substring(2,7).toUpperCase()
 
-set(ref(db,"rooms/"+room+"/players/"+playerId),true)
+set(ref(db,"rooms/"+room),{
+host:playerID
+})
 
-document.getElementById("menu").classList.remove("active")
-document.getElementById("lobby").classList.add("active")
+addPlayer()
 
-document.getElementById("roomCode").innerText="Room: "+room
+show("lobby")
+
+document.getElementById("roomCode").innerText = room
 
 listenPlayers()
 
 }
+
 
 window.joinRoom = function(){
 
-room=document.getElementById("roomInput").value.toUpperCase()
+room = document.getElementById("roomInput").value.toUpperCase()
 
-set(ref(db,"rooms/"+room+"/players/"+playerId),true)
+addPlayer()
 
-document.getElementById("menu").classList.remove("active")
-document.getElementById("lobby").classList.add("active")
+show("lobby")
 
-document.getElementById("roomCode").innerText="Room: "+room
+document.getElementById("roomCode").innerText = room
 
 listenPlayers()
 
 }
 
+
+function addPlayer(){
+
+push(ref(db,"rooms/"+room+"/players"),{
+id:playerID
+})
+
+}
+
+
 function listenPlayers(){
 
-onValue(ref(db,"rooms/"+room+"/players"),snapshot=>{
+onValue(ref(db,"rooms/"+room+"/players"),(snap)=>{
 
-let data=snapshot.val()
+let data = snap.val()
 
-let html=""
+players = Object.keys(data || {})
 
-for(let p in data){
-
-html+="Player<br>"
-
-}
-
-document.getElementById("playerList").innerHTML=html
+document.getElementById("players").innerHTML = players.length + " players joined"
 
 })
 
 }
 
-window.startGame=function(){
 
-let pair=words[Math.floor(Math.random()*words.length)]
+window.startGame = function(){
 
-let goodWord=pair[0]
-let impostorWord=pair[1]
+let total = players.length
 
-onValue(ref(db,"rooms/"+room+"/players"),snapshot=>{
+roles = new Array(total).fill("Good Guy")
 
-let players=Object.keys(snapshot.val())
+roles[0] = "Impostor"
 
-let impostor=players[Math.floor(Math.random()*players.length)]
+if(total >= 5){
 
-players.forEach(p=>{
-
-let role="GOOD GUY"
-let word=goodWord
-
-if(p===impostor){
-
-role="IMPOSTOR"
-word=impostorWord
+roles[1] = "Mr White"
 
 }
 
-set(ref(db,"rooms/"+room+"/roles/"+p),{
-role:role,
-word:word
-})
+shuffle(roles)
+
+let pair = wordPairs[Math.floor(Math.random()*wordPairs.length)]
+
+let goodWord = pair[0]
+let impostorWord = pair[1]
+
+words = roles.map(r=>{
+
+if(r=="Good Guy") return goodWord
+if(r=="Impostor") return impostorWord
+if(r=="Mr White") return "???"
 
 })
 
-})
+show("roleScreen")
 
-listenRole()
+reveal()
 
 }
 
-function listenRole(){
 
-onValue(ref(db,"rooms/"+room+"/roles/"+playerId),snapshot=>{
+function reveal(){
 
-if(!snapshot.exists()) return
-
-let data=snapshot.val()
-
-document.getElementById("lobby").classList.remove("active")
-document.getElementById("roleScreen").classList.add("active")
-
-document.getElementById("roleText").innerText=data.role
-document.getElementById("wordText").innerText=data.word
-
-})
+document.getElementById("role").innerText = roles[revealIndex]
+document.getElementById("word").innerText = words[revealIndex]
 
 }
+
+
+window.showNext = function(){
+
+revealIndex++
+
+if(revealIndex >= players.length){
+
+show("finish")
+
+}else{
+
+reveal()
+
+}
+
+}
+
+
+function shuffle(a){
+
+for(let i=a.length-1;i>0;i--){
+
+let j = Math.floor(Math.random()*(i+1))
+
+[a[i],a[j]]=[a[j],a[i]]
+
+}
+
+}
+
 
 </script>
 
