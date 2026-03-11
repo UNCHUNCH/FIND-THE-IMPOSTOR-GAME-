@@ -2,10 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Find The Impostor</title>
-
+<title>Find The Impostor - Auto Multiplayer</title>
 <style>
-
 body{
 font-family:Arial;
 background:#0f172a;
@@ -14,7 +12,6 @@ text-align:center;
 margin:0;
 padding:30px;
 }
-
 button{
 padding:12px 20px;
 margin:10px;
@@ -23,322 +20,177 @@ border-radius:8px;
 border:none;
 cursor:pointer;
 }
-
 input{
 padding:10px;
 font-size:18px;
 }
-
 .screen{
 display:none;
 }
-
 .active{
 display:block;
 }
-
 </style>
 </head>
-
 <body>
 
+<!-- MENU SCREEN -->
 <div id="menu" class="screen active">
-
 <h1>Find The Impostor</h1>
-
 <button onclick="createRoom()">Create Room</button>
-
 <br><br>
-
 <input id="roomInput" placeholder="Room Code">
-
 <br>
-
 <button onclick="joinRoom()">Join Room</button>
-
 </div>
 
-
+<!-- LOBBY SCREEN -->
 <div id="lobby" class="screen">
-
 <h2>Room Code</h2>
-
 <h1 id="roomCode"></h1>
-
 <h3 id="playerCount">0 players</h3>
-
 <button onclick="startGame()">Start Game</button>
-
 </div>
 
-
+<!-- ROLE SCREEN -->
 <div id="roleScreen" class="screen">
-
 <h2>Your Role</h2>
-
 <h1 id="role"></h1>
-
 <h2 id="word"></h2>
-
 </div>
-
-
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-
 import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-
+// Firebase Config
 const firebaseConfig = {
-
 apiKey: "AIzaSyC2PkOFEVo3ujAf5An6raE3VljHWJZmG-o",
-
 authDomain: "imupostor.firebaseapp.com",
-
 databaseURL: "https://imupostor-default-rtdb.asia-southeast1.firebasedatabase.app",
-
 projectId: "imupostor",
-
 storageBucket: "imupostor.firebasestorage.app",
-
 messagingSenderId: "927436604068",
-
 appId: "1:927436604068:web:aaa75c6c8dd40695971c31"
-
 };
 
-
 const app = initializeApp(firebaseConfig);
-
 const db = getDatabase(app);
 
+let room = "";
+let playerKey = "";
+let role = "";
+let word = "";
 
-let room = ""
-
-let playerKey = ""
-
-let role = ""
-
-let word = ""
-
-
-
+// Kata pasangan
 const wordPairs = [
+["Apple","Pear"],["Coffee","Tea"],["Cat","Tiger"],["Beach","Island"],["Doctor","Nurse"],
+["Pizza","Burger"],["Car","Motorcycle"],["Plane","Helicopter"],["Rain","Snow"],["Laptop","Computer"]
+];
 
-["Apple","Pear"],
-
-["Coffee","Tea"],
-
-["Cat","Tiger"],
-
-["Beach","Island"],
-
-["Doctor","Nurse"],
-
-["Pizza","Burger"],
-
-["Car","Motorcycle"],
-
-["Plane","Helicopter"],
-
-["Rain","Snow"],
-
-["Laptop","Computer"]
-
-]
-
-
-
+// Helper: Tampilkan layar tertentu
 function show(id){
-
-document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"))
-
-document.getElementById(id).classList.add("active")
-
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
 }
 
-
-
+// Buat room baru
 window.createRoom = function(){
-
-room = Math.random().toString(36).substring(2,7).toUpperCase()
-
-set(ref(db,"rooms/"+room),{
-
-started:false
-
-})
-
-addPlayer()
-
-show("lobby")
-
-document.getElementById("roomCode").innerText = room
-
-listenLobby()
-
+room = Math.random().toString(36).substring(2,7).toUpperCase();
+set(ref(db,"rooms/"+room),{started:false});
+addPlayer();
+show("lobby");
+document.getElementById("roomCode").innerText = room;
+listenLobby();
 }
 
-
-
+// Join room
 window.joinRoom = function(){
-
-room = document.getElementById("roomInput").value.toUpperCase()
-
-addPlayer()
-
-show("lobby")
-
-document.getElementById("roomCode").innerText = room
-
-listenLobby()
-
+room = document.getElementById("roomInput").value.toUpperCase();
+addPlayer();
+show("lobby");
+document.getElementById("roomCode").innerText = room;
+listenLobby();
 }
 
-
-
+// Tambah player baru
 function addPlayer(){
-
-playerKey = push(ref(db,"rooms/"+room+"/players")).key
-
+playerKey = push(ref(db,"rooms/"+room+"/players")).key;
 set(ref(db,"rooms/"+room+"/players/"+playerKey),{
-
 role:"",
-
 word:""
-
-})
-
+});
 }
 
-
-
+// Listener lobby (jumlah pemain + mulai game)
 function listenLobby(){
-
 onValue(ref(db,"rooms/"+room+"/players"),snap=>{
-
-let players = snap.val()
-
-let count = Object.keys(players || {}).length
-
-document.getElementById("playerCount").innerText = count+" players"
-
-})
-
+let players = snap.val();
+let count = Object.keys(players||{}).length;
+document.getElementById("playerCount").innerText = count+" players";
+});
 
 onValue(ref(db,"rooms/"+room+"/started"),snap=>{
-
 if(snap.val()==true){
-
-getRole()
-
+getRole();
+}
+});
 }
 
-})
-
-}
-
-
-
+// Start game (host)
 window.startGame = async function(){
+let snap = await get(ref(db,"rooms/"+room+"/players"));
+let players = snap.val();
+let ids = Object.keys(players);
+let total = ids.length;
 
-let snap = await get(ref(db,"rooms/"+room+"/players"))
+// Tentukan roles otomatis
+let roles = new Array(total).fill("Good Guy");
+roles[0] = "Impostor";
+if(total>=5) roles[1] = "Mr White";
+roles = shuffle(roles);
 
-let players = snap.val()
+// Pilih kata random
+let pair = wordPairs[Math.floor(Math.random()*wordPairs.length)];
+let good = pair[0];
+let impostor = pair[1];
 
-let ids = Object.keys(players)
-
-let total = ids.length
-
-
-let roles = new Array(total).fill("Good Guy")
-
-roles[0] = "Impostor"
-
-if(total >=5){
-
-roles[1] = "Mr White"
-
-}
-
-
-roles = shuffle(roles)
-
-
-let pair = wordPairs[Math.floor(Math.random()*wordPairs.length)]
-
-let good = pair[0]
-
-let impostor = pair[1]
-
-
+// Simpan role & kata ke masing-masing player di DB
 ids.forEach((id,i)=>{
-
-let r = roles[i]
-
-let w = ""
-
-if(r=="Good Guy") w = good
-
-if(r=="Impostor") w = impostor
-
-if(r=="Mr White") w = "???"
-
+let r = roles[i];
+let w = "";
+if(r=="Good Guy") w = good;
+if(r=="Impostor") w = impostor;
+if(r=="Mr White") w = "???";
 set(ref(db,"rooms/"+room+"/players/"+id),{
-
 role:r,
-
 word:w
+});
+});
 
-})
-
-})
-
-
-set(ref(db,"rooms/"+room+"/started"),true)
-
+// Tandai game sudah mulai
+set(ref(db,"rooms/"+room+"/started"),true);
 }
 
-
-
+// Ambil role & kata otomatis untuk setiap player
 async function getRole(){
-
-let snap = await get(ref(db,"rooms/"+room+"/players/"+playerKey))
-
-let data = snap.val()
-
-role = data.role
-
-word = data.word
-
-show("roleScreen")
-
-document.getElementById("role").innerText = role
-
-document.getElementById("word").innerText = word
-
+let snap = await get(ref(db,"rooms/"+room+"/players/"+playerKey));
+let data = snap.val();
+role = data.role;
+word = data.word;
+show("roleScreen");
+document.getElementById("role").innerText = role;
+document.getElementById("word").innerText = word;
 }
 
-
-
+// Shuffle helper
 function shuffle(array){
-
 for(let i=array.length-1;i>0;i--){
-
-let j = Math.floor(Math.random()*(i+1))
-
-[array[i],array[j]]=[array[j],array[i]]
-
+let j = Math.floor(Math.random()*(i+1));
+[array[i],array[j]]=[array[j],array[i]];
 }
-
-return array
-
+return array;
 }
-
-
 </script>
-
 </body>
 </html>
