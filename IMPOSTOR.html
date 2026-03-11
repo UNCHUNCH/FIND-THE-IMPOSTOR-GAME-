@@ -1,51 +1,36 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Secret Role Game</title>
+<title>IMUPOSTOR</title>
 
 <style>
 
 body{
 font-family:Arial;
+text-align:center;
 background:#111;
 color:white;
-text-align:center;
-margin:0;
-padding:0;
-}
-
-.screen{
-display:none;
-padding-top:100px;
 }
 
 button{
-padding:12px 25px;
+padding:15px;
+margin:10px;
 font-size:18px;
-margin-top:20px;
 cursor:pointer;
-border:none;
-border-radius:8px;
 }
 
 input{
 padding:10px;
 font-size:18px;
-width:80px;
-text-align:center;
 }
 
-.role{
-font-size:35px;
-margin-top:20px;
+.screen{
+display:none;
 }
 
-.word{
-font-size:30px;
-margin-top:10px;
-color:#00ffcc;
+.active{
+display:block;
 }
 
 </style>
@@ -53,298 +38,188 @@ color:#00ffcc;
 
 <body>
 
-<!-- WINDOW 1 -->
-<div id="startScreen" class="screen" style="display:block">
+<h1>IMUPOSTOR</h1>
 
-<h1>Secret Role Game</h1>
-<button onclick="startGame()">START</button>
+<div id="menu" class="screen active">
+
+<button onclick="createRoom()">Create Room</button>
+
+<br><br>
+
+<input id="roomInput" placeholder="Room Code">
+
+<button onclick="joinRoom()">Join Room</button>
 
 </div>
 
 
-<!-- WINDOW 2 -->
-<div id="playerScreen" class="screen">
+<div id="lobby" class="screen">
 
-<h2>Jumlah Pemain</h2>
-<input type="number" id="playerCount" min="3" max="20">
+<h2 id="roomCode"></h2>
+
+Players:
+
+<div id="playerList"></div>
+
 <br>
-<button onclick="createGame()">LANJUT</button>
+
+<button onclick="startGame()">Start Game</button>
 
 </div>
 
 
-<!-- WINDOW 3 -->
 <div id="roleScreen" class="screen">
 
-<h2 id="playerText"></h2>
+<h2>Your Role</h2>
 
-<div class="role" id="roleText"></div>
-<div class="word" id="wordText"></div>
+<h1 id="roleText"></h1>
 
-<button onclick="nextPlayer()">NEXT</button>
-
-</div>
-
-
-<!-- WINDOW 4 -->
-<div id="endScreen" class="screen">
-
-<h1>🎮 Selamat Bermain!</h1>
-<p>Semua role dan kata sudah dibagikan.</p>
+<h2 id="wordText"></h2>
 
 </div>
 
 
-<script>
 
-let roles = [];
-let currentPlayer = 0;
-let totalPlayers = 0;
+<script type="module">
 
-let goodWord = "";
-let impostorWord = "";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+const firebaseConfig = {
+apiKey: "AIzaSyC2PkOFEVo3ujAf5An6raE3VljHWJZmG-o",
+authDomain: "imupostor.firebaseapp.com",
+projectId: "imupostor",
+storageBucket: "imupostor.firebasestorage.app",
+messagingSenderId: "927436604068",
+appId: "1:927436604068:web:aaa75c6c8dd40695971c31"
+};
 
-/* =======================
-100 PASANG KATA
-======================= */
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-let wordPairs = [
+let room = "";
+let playerId = Math.random().toString(36).substring(2);
 
-["Kucing","Harimau"],
-["Mobil","Motor"],
-["Pantai","Pulau"],
-["Kopi","Teh"],
-["Pensil","Pulpen"],
-["Laptop","Komputer"],
-["Ayam","Bebek"],
-["Sepatu","Sandal"],
-["Buku","Majalah"],
-["Meja","Kursi"],
-
-["Gajah","Badak"],
-["Pisang","Mangga"],
-["Apel","Pir"],
-["Jeruk","Lemon"],
-["Nasi","Mie"],
-["Burger","Pizza"],
-["Susu","Yogurt"],
-["Kamera","Handphone"],
-["TV","Monitor"],
-["Keyboard","Mouse"],
-
-["Gunung","Bukit"],
-["Danau","Sungai"],
-["Pesawat","Helikopter"],
-["Kapal","Perahu"],
-["Kereta","Tram"],
-["Dokter","Perawat"],
-["Guru","Dosen"],
-["Polisi","Tentara"],
-["Pelukis","Desainer"],
-["Penulis","Jurnalis"],
-
-["Topi","Helm"],
-["Jaket","Sweater"],
-["Celana","Rok"],
-["Sabun","Shampoo"],
-["Pasta Gigi","Obat Kumur"],
-["Sendok","Garpu"],
-["Pisau","Gunting"],
-["Lampu","Lilin"],
-["Kipas","AC"],
-["Jam","Stopwatch"],
-
-["Instagram","Facebook"],
-["YouTube","TikTok"],
-["Google","Bing"],
-["Android","iPhone"],
-["Windows","Linux"],
-["Python","Java"],
-["HTML","CSS"],
-["Robot","Drone"],
-["Game","Film"],
-["Musik","Podcast"],
-
-["Basket","Sepak Bola"],
-["Tennis","Badminton"],
-["Renang","Menyelam"],
-["Lari","Maraton"],
-["Gym","Yoga"],
-["Pizza","Lasagna"],
-["Donat","Croissant"],
-["Es Krim","Gelato"],
-["Coklat","Permen"],
-["Teh","Matcha"],
-
-["Kapal Selam","Kapal"],
-["Helm","Topi"],
-["Laptop","Tablet"],
-["Monitor","TV"],
-["Printer","Scanner"],
-["Piano","Keyboard"],
-["Gitar","Ukulele"],
-["Drum","Tamborin"],
-["Biola","Cello"],
-["Saxophone","Trumpet"],
-
-["Singapura","Malaysia"],
-["Indonesia","Filipina"],
-["Jepang","Korea"],
-["China","Taiwan"],
-["India","Pakistan"],
-["Paris","London"],
-["Roma","Athena"],
-["Madrid","Barcelona"],
-["Berlin","Munich"],
-["New York","Chicago"],
-
-["Amazon","Shopee"],
-["Tokopedia","Bukalapak"],
-["Grab","Gojek"],
-["Uber","Lyft"],
-["Netflix","Disney+"],
-["Spotify","Apple Music"],
-["WhatsApp","Telegram"],
-["Zoom","Google Meet"],
-["Chrome","Firefox"],
-["Safari","Edge"],
-
-["Alien","Robot"],
-["Zombie","Vampire"],
-["Ninja","Samurai"],
-["Pirate","Viking"],
-["Knight","Soldier"],
-["Dragon","Dinosaur"],
-["Monster","Ghost"],
-["Wizard","Witch"],
-["Angel","Demon"],
-["Superhero","Villain"]
-
+const words = [
+["Apple","Pear"],
+["Dog","Wolf"],
+["Car","Truck"],
+["Coffee","Tea"],
+["Pizza","Burger"],
+["Cat","Tiger"],
+["Plane","Helicopter"],
+["Phone","Tablet"],
+["School","University"],
+["Chair","Sofa"]
 ];
 
+function randomRoom(){
+return Math.random().toString(36).substring(2,7).toUpperCase();
+}
 
-/* =======================
-START GAME
-======================= */
+window.createRoom = function(){
 
-function startGame(){
+room = randomRoom()
 
-document.getElementById("startScreen").style.display="none";
-document.getElementById("playerScreen").style.display="block";
+set(ref(db,"rooms/"+room+"/players/"+playerId),true)
+
+document.getElementById("menu").classList.remove("active")
+document.getElementById("lobby").classList.add("active")
+
+document.getElementById("roomCode").innerText="Room: "+room
+
+listenPlayers()
 
 }
 
+window.joinRoom = function(){
 
-/* =======================
-CREATE GAME
-======================= */
+room=document.getElementById("roomInput").value.toUpperCase()
 
-function createGame(){
+set(ref(db,"rooms/"+room+"/players/"+playerId),true)
 
-totalPlayers = parseInt(document.getElementById("playerCount").value);
+document.getElementById("menu").classList.remove("active")
+document.getElementById("lobby").classList.add("active")
 
-if(totalPlayers < 3){
-alert("Minimal 3 pemain");
-return;
-}
+document.getElementById("roomCode").innerText="Room: "+room
 
-roles = [];
-
-let impostor = 1;
-let mrwhite = 1;
-
-if(totalPlayers >= 8){
-impostor = 2;
-}
-
-if(totalPlayers >= 11){
-mrwhite = 2;
-}
-
-for(let i=0;i<impostor;i++){
-roles.push("IMPOSTOR 🔪");
-}
-
-for(let i=0;i<mrwhite;i++){
-roles.push("MR WHITE ❓");
-}
-
-let good = totalPlayers - impostor - mrwhite;
-
-for(let i=0;i<good;i++){
-roles.push("GOOD GUY 😇");
-}
-
-roles.sort(()=>Math.random()-0.5);
-
-
-/* RANDOM WORD */
-
-let pair = wordPairs[Math.floor(Math.random()*wordPairs.length)];
-
-goodWord = pair[0];
-impostorWord = pair[1];
-
-
-document.getElementById("playerScreen").style.display="none";
-document.getElementById("roleScreen").style.display="block";
-
-currentPlayer = 0;
-
-showRole();
+listenPlayers()
 
 }
 
+function listenPlayers(){
 
-/* =======================
-SHOW ROLE
-======================= */
+onValue(ref(db,"rooms/"+room+"/players"),snapshot=>{
 
-function showRole(){
+let data=snapshot.val()
 
-let role = roles[currentPlayer];
-let word = "";
+let html=""
 
-if(role == "GOOD GUY 😇"){
-word = goodWord;
-}
+for(let p in data){
 
-if(role == "IMPOSTOR 🔪"){
-word = impostorWord;
-}
-
-if(role == "MR WHITE ❓"){
-word = "???";
-}
-
-document.getElementById("playerText").innerHTML =
-"Pemain " + (currentPlayer+1);
-
-document.getElementById("roleText").innerHTML = role;
-document.getElementById("wordText").innerHTML = word;
+html+="Player<br>"
 
 }
 
+document.getElementById("playerList").innerHTML=html
 
-/* =======================
-NEXT PLAYER
-======================= */
-
-function nextPlayer(){
-
-currentPlayer++;
-
-if(currentPlayer >= totalPlayers){
-
-document.getElementById("roleScreen").style.display="none";
-document.getElementById("endScreen").style.display="block";
-
-return;
+})
 
 }
 
-showRole();
+window.startGame=function(){
+
+let pair=words[Math.floor(Math.random()*words.length)]
+
+let goodWord=pair[0]
+let impostorWord=pair[1]
+
+onValue(ref(db,"rooms/"+room+"/players"),snapshot=>{
+
+let players=Object.keys(snapshot.val())
+
+let impostor=players[Math.floor(Math.random()*players.length)]
+
+players.forEach(p=>{
+
+let role="GOOD GUY"
+let word=goodWord
+
+if(p===impostor){
+
+role="IMPOSTOR"
+word=impostorWord
+
+}
+
+set(ref(db,"rooms/"+room+"/roles/"+p),{
+role:role,
+word:word
+})
+
+})
+
+})
+
+listenRole()
+
+}
+
+function listenRole(){
+
+onValue(ref(db,"rooms/"+room+"/roles/"+playerId),snapshot=>{
+
+if(!snapshot.exists()) return
+
+let data=snapshot.val()
+
+document.getElementById("lobby").classList.remove("active")
+document.getElementById("roleScreen").classList.add("active")
+
+document.getElementById("roleText").innerText=data.role
+document.getElementById("wordText").innerText=data.word
+
+})
 
 }
 
@@ -352,4 +227,3 @@ showRole();
 
 </body>
 </html>
-```
