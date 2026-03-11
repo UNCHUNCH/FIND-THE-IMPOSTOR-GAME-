@@ -1,0 +1,355 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Secret Role Game</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+margin:0;
+padding:0;
+}
+
+.screen{
+display:none;
+padding-top:100px;
+}
+
+button{
+padding:12px 25px;
+font-size:18px;
+margin-top:20px;
+cursor:pointer;
+border:none;
+border-radius:8px;
+}
+
+input{
+padding:10px;
+font-size:18px;
+width:80px;
+text-align:center;
+}
+
+.role{
+font-size:35px;
+margin-top:20px;
+}
+
+.word{
+font-size:30px;
+margin-top:10px;
+color:#00ffcc;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- WINDOW 1 -->
+<div id="startScreen" class="screen" style="display:block">
+
+<h1>Secret Role Game</h1>
+<button onclick="startGame()">START</button>
+
+</div>
+
+
+<!-- WINDOW 2 -->
+<div id="playerScreen" class="screen">
+
+<h2>Jumlah Pemain</h2>
+<input type="number" id="playerCount" min="3" max="20">
+<br>
+<button onclick="createGame()">LANJUT</button>
+
+</div>
+
+
+<!-- WINDOW 3 -->
+<div id="roleScreen" class="screen">
+
+<h2 id="playerText"></h2>
+
+<div class="role" id="roleText"></div>
+<div class="word" id="wordText"></div>
+
+<button onclick="nextPlayer()">NEXT</button>
+
+</div>
+
+
+<!-- WINDOW 4 -->
+<div id="endScreen" class="screen">
+
+<h1>🎮 Selamat Bermain!</h1>
+<p>Semua role dan kata sudah dibagikan.</p>
+
+</div>
+
+
+<script>
+
+let roles = [];
+let currentPlayer = 0;
+let totalPlayers = 0;
+
+let goodWord = "";
+let impostorWord = "";
+
+
+/* =======================
+100 PASANG KATA
+======================= */
+
+let wordPairs = [
+
+["Kucing","Harimau"],
+["Mobil","Motor"],
+["Pantai","Pulau"],
+["Kopi","Teh"],
+["Pensil","Pulpen"],
+["Laptop","Komputer"],
+["Ayam","Bebek"],
+["Sepatu","Sandal"],
+["Buku","Majalah"],
+["Meja","Kursi"],
+
+["Gajah","Badak"],
+["Pisang","Mangga"],
+["Apel","Pir"],
+["Jeruk","Lemon"],
+["Nasi","Mie"],
+["Burger","Pizza"],
+["Susu","Yogurt"],
+["Kamera","Handphone"],
+["TV","Monitor"],
+["Keyboard","Mouse"],
+
+["Gunung","Bukit"],
+["Danau","Sungai"],
+["Pesawat","Helikopter"],
+["Kapal","Perahu"],
+["Kereta","Tram"],
+["Dokter","Perawat"],
+["Guru","Dosen"],
+["Polisi","Tentara"],
+["Pelukis","Desainer"],
+["Penulis","Jurnalis"],
+
+["Topi","Helm"],
+["Jaket","Sweater"],
+["Celana","Rok"],
+["Sabun","Shampoo"],
+["Pasta Gigi","Obat Kumur"],
+["Sendok","Garpu"],
+["Pisau","Gunting"],
+["Lampu","Lilin"],
+["Kipas","AC"],
+["Jam","Stopwatch"],
+
+["Instagram","Facebook"],
+["YouTube","TikTok"],
+["Google","Bing"],
+["Android","iPhone"],
+["Windows","Linux"],
+["Python","Java"],
+["HTML","CSS"],
+["Robot","Drone"],
+["Game","Film"],
+["Musik","Podcast"],
+
+["Basket","Sepak Bola"],
+["Tennis","Badminton"],
+["Renang","Menyelam"],
+["Lari","Maraton"],
+["Gym","Yoga"],
+["Pizza","Lasagna"],
+["Donat","Croissant"],
+["Es Krim","Gelato"],
+["Coklat","Permen"],
+["Teh","Matcha"],
+
+["Kapal Selam","Kapal"],
+["Helm","Topi"],
+["Laptop","Tablet"],
+["Monitor","TV"],
+["Printer","Scanner"],
+["Piano","Keyboard"],
+["Gitar","Ukulele"],
+["Drum","Tamborin"],
+["Biola","Cello"],
+["Saxophone","Trumpet"],
+
+["Singapura","Malaysia"],
+["Indonesia","Filipina"],
+["Jepang","Korea"],
+["China","Taiwan"],
+["India","Pakistan"],
+["Paris","London"],
+["Roma","Athena"],
+["Madrid","Barcelona"],
+["Berlin","Munich"],
+["New York","Chicago"],
+
+["Amazon","Shopee"],
+["Tokopedia","Bukalapak"],
+["Grab","Gojek"],
+["Uber","Lyft"],
+["Netflix","Disney+"],
+["Spotify","Apple Music"],
+["WhatsApp","Telegram"],
+["Zoom","Google Meet"],
+["Chrome","Firefox"],
+["Safari","Edge"],
+
+["Alien","Robot"],
+["Zombie","Vampire"],
+["Ninja","Samurai"],
+["Pirate","Viking"],
+["Knight","Soldier"],
+["Dragon","Dinosaur"],
+["Monster","Ghost"],
+["Wizard","Witch"],
+["Angel","Demon"],
+["Superhero","Villain"]
+
+];
+
+
+/* =======================
+START GAME
+======================= */
+
+function startGame(){
+
+document.getElementById("startScreen").style.display="none";
+document.getElementById("playerScreen").style.display="block";
+
+}
+
+
+/* =======================
+CREATE GAME
+======================= */
+
+function createGame(){
+
+totalPlayers = parseInt(document.getElementById("playerCount").value);
+
+if(totalPlayers < 3){
+alert("Minimal 3 pemain");
+return;
+}
+
+roles = [];
+
+let impostor = 1;
+let mrwhite = 1;
+
+if(totalPlayers >= 8){
+impostor = 2;
+}
+
+if(totalPlayers >= 11){
+mrwhite = 2;
+}
+
+for(let i=0;i<impostor;i++){
+roles.push("IMPOSTOR 🔪");
+}
+
+for(let i=0;i<mrwhite;i++){
+roles.push("MR WHITE ❓");
+}
+
+let good = totalPlayers - impostor - mrwhite;
+
+for(let i=0;i<good;i++){
+roles.push("GOOD GUY 😇");
+}
+
+roles.sort(()=>Math.random()-0.5);
+
+
+/* RANDOM WORD */
+
+let pair = wordPairs[Math.floor(Math.random()*wordPairs.length)];
+
+goodWord = pair[0];
+impostorWord = pair[1];
+
+
+document.getElementById("playerScreen").style.display="none";
+document.getElementById("roleScreen").style.display="block";
+
+currentPlayer = 0;
+
+showRole();
+
+}
+
+
+/* =======================
+SHOW ROLE
+======================= */
+
+function showRole(){
+
+let role = roles[currentPlayer];
+let word = "";
+
+if(role == "GOOD GUY 😇"){
+word = goodWord;
+}
+
+if(role == "IMPOSTOR 🔪"){
+word = impostorWord;
+}
+
+if(role == "MR WHITE ❓"){
+word = "???";
+}
+
+document.getElementById("playerText").innerHTML =
+"Pemain " + (currentPlayer+1);
+
+document.getElementById("roleText").innerHTML = role;
+document.getElementById("wordText").innerHTML = word;
+
+}
+
+
+/* =======================
+NEXT PLAYER
+======================= */
+
+function nextPlayer(){
+
+currentPlayer++;
+
+if(currentPlayer >= totalPlayers){
+
+document.getElementById("roleScreen").style.display="none";
+document.getElementById("endScreen").style.display="block";
+
+return;
+
+}
+
+showRole();
+
+}
+
+</script>
+
+</body>
+</html>
+```
